@@ -1,65 +1,49 @@
-package xyebot
+package main
 
 import (
-	"encoding/json"
+	"github.com/dgraph-io/badger"
+	"github.com/go-telegram-bot-api/telegram-bot-api"
+	"log"
 	"math/rand"
-	"net/http"
 	"time"
 )
 
-const DEFAULT_DELAY = 4
+var DB *badger.DB = nil
+var BOT *tgbotapi.BotAPI = nil
 
-var Delay map[int64]int
-var Gentle map[int64]bool
-var WordsAmount map[int64]int
-var Stopped map[int64]bool
-var CustomDelay map[int64]int
-
-func SendMessage(w http.ResponseWriter, chatID int64, text string, replyToID *int64) {
-	var msg Response
-	if replyToID == nil {
-		msg = Response{Chatid: chatID, Text: text, Method: "sendMessage"}
-	} else {
-		msg = Response{Chatid: chatID, Text: text, ReplyToID: replyToID, Method: "sendMessage"}
-	}
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(msg)
-}
-
-func Handler(w http.ResponseWriter, r *http.Request) {
-	request, err := NewRequest(w, r)
-	if err != nil {
-		return
-	}
-	if err = request.ParseCommand(w); err == nil {
-		return
-	}
-	if request.IsStopped() {
-		return
-	}
-	request.HandleDelay()
-	replyID := request.GetReplyIDIfNeeded()
-	if request.IsAnswerNeeded(replyID) {
-		if replyID == nil {
-			request.CleanDelay()
-		}
-		// log.Infof(ctx, "[%v] %s", updateMessage.Chat.ID, updateMessage.Text)
-		output := request.Huify()
-		if output != "" {
-			SendMessage(request.writer, request.updateMessage.Chat.ID, output, replyID)
-			return
-		}
-	}
-}
-
-func init() {
-	Delay = make(map[int64]int)
-	Gentle = make(map[int64]bool)
-	WordsAmount = make(map[int64]int)
-	Stopped = make(map[int64]bool)
-	CustomDelay = make(map[int64]int)
+func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	http.HandleFunc("/", Handler)
+	// init db
+	opts := badger.DefaultOptions
+	opts.Dir = "/tmp/xyebot_db"
+	opts.ValueDir = "/tmp/xyebot_db"
+	var err error
+	DB, err = badger.Open(opts)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer DB.Close()
+
+	// init bot
+	BOT, err = tgbotapi.NewBotAPI("788604116:AAGrS_CRUwt7826YkDHmCfKINRBr6Ss1KJA")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	BOT.Debug = true
+
+	log.Printf("Authorized on account %s", BOT.Self.UserName)
+
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+
+	updates, err := BOT.GetUpdatesChan(u)
+
+	for update := range updates {
+		log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
+
+		request := NewRequest(&update)
+		request.Handle()
+	}
 }
