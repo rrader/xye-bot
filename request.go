@@ -85,6 +85,8 @@ func (self *Request) Handle() {
 				msg.ReplyToMessageID = *replyID
 			}
 			BOT.Send(msg)
+		} else {
+			return
 		}
 	}
 	self.HandleDelay()
