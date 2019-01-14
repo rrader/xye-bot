@@ -73,6 +73,7 @@ func (self *Request) Handle() {
 	if self.IsStopped() {
 		return
 	}
+	ChatMotions.HookNewMessage(self.update.Message)
 	replyID := self.GetReplyIDIfNeeded()
 	if self.IsAnswerNeeded(replyID) {
 		if replyID == nil {
@@ -87,6 +88,25 @@ func (self *Request) Handle() {
 			BOT.Send(msg)
 		} else {
 			return
+		}
+	} else {
+		status := ChatMotions.ChatStatus(self.update.Message.Chat.ID)
+		if status != nil && status.ShouldRespond != 0 {
+			ChatMotions.ResetShouldRespond(self.update.Message.Chat.ID)
+
+			var output string
+			if status.ShouldRespond == 1 {
+				output = "😸"
+			}
+			if status.ShouldRespond == -1 {
+				output = "😓"
+			}
+
+			msg := tgbotapi.NewMessage(self.update.Message.Chat.ID, output)
+			if replyID != nil {
+				msg.ReplyToMessageID = *replyID
+			}
+			BOT.Send(msg)
 		}
 	}
 	self.HandleDelay()

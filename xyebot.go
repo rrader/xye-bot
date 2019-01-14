@@ -5,15 +5,17 @@ import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"log"
 	"math/rand"
-	"os"
 	"time"
 )
 
 var DB *badger.DB = nil
 var BOT *tgbotapi.BotAPI = nil
+var ChatMotions *ChatMotionsClient = nil
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
+
+	ChatMotions = ChatMotionsOpen()
 
 	// init db
 	opts := badger.DefaultOptions
@@ -27,7 +29,7 @@ func main() {
 	defer DB.Close()
 
 	// init bot
-	BOT, err = tgbotapi.NewBotAPI(os.Getenv("TG_TOKEN"))
+	BOT, err = tgbotapi.NewBotAPI("796231427:AAFMvhI8jdZUdGeZMf5Z9gerTUjFF0QN-LM")
 	if err != nil {
 		log.Panic(err)
 	}
