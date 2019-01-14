@@ -5,6 +5,7 @@ import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"log"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -29,7 +30,7 @@ func main() {
 	defer DB.Close()
 
 	// init bot
-	BOT, err = tgbotapi.NewBotAPI("796231427:AAE-HijQVMLNY6J2j_aHlyCXmUgml8h6j7Y")
+	BOT, err = tgbotapi.NewBotAPI(os.Getenv("TG_TOKEN"))
 	if err != nil {
 		log.Panic(err)
 	}
